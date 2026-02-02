@@ -83,7 +83,7 @@ def run_llm(prompt):
     }
 
     payload = {
-        "model": "grok-2-latest",
+        "model": "grok-4-1-fast-reasoning",
         "messages": [
             {
                 "role": "system",
@@ -94,14 +94,19 @@ def run_llm(prompt):
                 "content": prompt
             }
         ],
-        "temperature": 0.4,
-        "max_tokens": 400
+        "temperature": 0.3,
+        "max_tokens": 300
     }
 
     response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
+
+    if response.status_code != 200:
+        st.error(f"xAI API error {response.status_code}")
+        st.code(response.text)
+        st.stop()
 
     return response.json()["choices"][0]["message"]["content"]
+
 
 # -------------------------------------------------
 # RUN ANALYSIS
