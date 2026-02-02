@@ -1,17 +1,20 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import subprocess
+import requests
 
+# -------------------------------------------------
 # PAGE CONFIG
+# -------------------------------------------------
 st.set_page_config(
     page_title="CashShield",
     page_icon="🛡️",
     layout="centered"
 )
 
+# -------------------------------------------------
 # HEADER
-
+# -------------------------------------------------
 st.title("🛡️ CashShield")
 st.caption("Simulate your financial future. Understand risk. Get clear advice.")
 
@@ -22,8 +25,9 @@ and explains what *actually* puts you at risk — in plain English.
 """
 )
 
-
+# -------------------------------------------------
 # USER INPUTS
+# -------------------------------------------------
 st.subheader("Your Monthly Reality")
 
 income = st.number_input("Income (£)", min_value=0.0, step=100.0, value=2800.0)
@@ -35,7 +39,7 @@ months = st.slider("Months to simulate", 6, 24, 12)
 runs = st.slider("Number of futures to simulate", 500, 3000, 1500)
 
 # -------------------------------------------------
-# SIMULATION LOGIC
+# MONTE CARLO SIMULATION
 # -------------------------------------------------
 def monte_carlo_simulation(
     income,
@@ -66,16 +70,38 @@ def monte_carlo_simulation(
     return np.array(all_runs)
 
 # -------------------------------------------------
-# LOCAL LLM (OLLAMA)
+# GROK (xAI) LLM
 # -------------------------------------------------
 def run_llm(prompt):
-    result = subprocess.run(
-        ["ollama", "run", "llama3"],
-        input=prompt,
-        text=True,
-        capture_output=True
-    )
-    return result.stdout.strip()
+    api_key = st.secrets["XAI_API_KEY"]
+
+    url = "https://api.x.ai/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "grok-2-latest",
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a calm, supportive personal financial analyst."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.4,
+        "max_tokens": 400
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    return response.json()["choices"][0]["message"]["content"]
 
 # -------------------------------------------------
 # RUN ANALYSIS
@@ -103,7 +129,7 @@ if st.button("🔮 Analyze My Financial Survival"):
     worst_case = np.percentile(results, 10, axis=0)
 
     # -------------------------------------------------
-    # VISUAL
+    # VISUALIZATION
     # -------------------------------------------------
     st.subheader("📉 Your Possible Futures")
 
@@ -154,8 +180,6 @@ if st.button("🔮 Analyze My Financial Survival"):
     st.subheader("🤖 AI Financial Explanation")
 
     prompt = f"""
-You are a calm, supportive personal financial analyst.
-
 User data:
 Income: £{income}
 Fixed expenses: £{fixed_expenses}
@@ -167,7 +191,7 @@ Risk level: {risk}
 
 Explain:
 1. Their financial situation in simple terms
-2. What the real danger is (not shaming)
+2. What the real danger is (without shaming)
 3. 3 clear, realistic actions they can take
 
 Avoid jargon. Be human and practical.
@@ -185,11 +209,11 @@ Avoid jargon. Be human and practical.
 
     st.markdown(
         """
-- Build emergency cash before optimizing spending
-- Reduce **fixed** bills first — they create irreversible risk
-- Expect bad months to happen early, not later
+- Build emergency cash before optimizing spending  
+- Reduce **fixed** bills first — they create irreversible risk  
+- Expect bad months to happen early, not later  
 - Stability matters more than perfection
 """
     )
 
-st.caption("CashShield • Built with Monte Carlo simulation + local AI")
+st.caption("CashShield • Monte Carlo simulation + Grok AI")
