@@ -1,145 +1,194 @@
-# 🛡️ CashShield
+# CashShield v2  
+### Financial Risk Simulation & Decision Support Tool
 
-**CashShield** is a personal cashflow risk simulator that helps individuals understand
-*whether their finances can survive real-world randomness*.
+CashShield is a **probabilistic financial resilience simulator** that helps users understand **how often their finances fail under uncertainty — and why**.
 
-Instead of budgets and averages, CashShield runs **thousands of possible futures**
-using Monte Carlo simulation and explains the results in clear, human language.
+Unlike traditional budgeting tools that rely on averages and static assumptions, CashShield models **thousands of possible financial futures** to expose hidden risk, fragility, and timing effects.
+
+> CashShield doesn’t predict the future.  
+> It shows how often things go wrong — and what actually matters.
 
 ---
 
-## 🔍 What Problem Does CashShield Solve?
+## 🚩 The Problem
 
 Most personal finance tools assume:
-- Income is stable
-- Expenses are predictable
-- Bad events happen “later”
+- Stable income  
+- Predictable expenses  
+- Smooth monthly averages  
 
-Real life doesn’t work that way.
+Real life is not like that.
 
-CashShield answers one simple but critical question:
+Income fluctuates.  
+Expenses spike unexpectedly.  
+Job loss and emergencies happen at the worst times.
 
-> **“If randomness hits me, do I survive?”**
+Two people with identical monthly budgets can have **radically different survival outcomes** — and most tools fail to reveal that risk.
 
 ---
 
-## 🧠 How It Works (Conceptually)
+## ✅ The Solution
 
-1. You enter your real financial situation  
-2. CashShield simulates **hundreds to thousands of future timelines**
-3. Each future includes:
+CashShield uses **Monte Carlo simulation** to generate thousands of realistic financial paths, allowing users to:
+
+- Estimate probability of financial failure
+- Identify when and why failure occurs
+- Compare “what-if” scenarios safely
+- Understand risk without judgement or shame
+
+Crucially, **simulation is authoritative**.  
+AI is used only to *interpret* results — never to generate or modify them.
+
+---
+
+## 🧠 Core Design Principles (v2)
+
+- **Simulation First**  
+  All risk metrics come from deterministic, auditable models.
+
+- **AI Is Non-Authoritative**  
+  LLMs explain results but never influence calculations.
+
+- **Risk > Advice**  
+  The system highlights fragility instead of telling users what to do.
+
+- **Emotionally Safe UX**  
+  No moral framing. No “you should”. Just clarity.
+
+- **Failure Is a System Property**  
+  Not a personal flaw.
+
+---
+
+## 🔬 How It Works
+
+1. User inputs income, expenses, savings, and risk parameters
+2. Thousands of financial futures are simulated
+3. Each path models:
    - Income volatility
-   - Spending variability
-   - Bad timing
-4. Results are aggregated into:
-   - Risk of running out of money
-   - Typical vs worst-case trajectories
-   - Clear, actionable insights
+   - Job loss events
+   - Emergency expenses
+   - Expense variability
+4. Outcomes are aggregated into:
+   - Failure probability
+   - Time-to-failure distribution
+   - Median and downside trajectories
+5. Optional AI layer explains the results in plain language
 
 ---
 
-## ✨ Key Features
+## 📊 Features
 
-- 📉 Monte Carlo cashflow simulation
-- 🔮 Risk-based survival analysis (not averages)
-- 📊 Visual future trajectories
-- 🤖 AI-generated plain-English explanations (local LLM)
-- 🧩 Root-cause analysis of financial fragility
-- 🛠 Actionable recommendations (not guilt-based budgeting)
-
----
-
-## 🖥 Tech Stack
-
-| Layer | Technology |
-|----|----|
-| Frontend | Streamlit |
-| Simulation Engine | NumPy |
-| Visualisation | Matplotlib |
-| AI Reasoning | LLaMA 3 via Ollama (local) |
-| Language | Python |
-
-No cloud AI. No paid APIs. Privacy-first by design.
+- Monte Carlo cashflow simulation engine
+- Financial survival probability analysis
+- Failure month detection
+- Visual future paths (median + downside)
+- Scenario comparison (“what-if fixes”)
+- Modular AI explanation layer (optional)
+- Streamlit-based interactive interface
 
 ---
 
-## 🚀 Installation & Usage
+## 🛠 Tech Stack
+
+- Python
+- NumPy
+- Pandas
+- Streamlit
+- Optional LLM integration (local or OpenRouter)
+- Probabilistic modeling
+
+---
+
+## 📐 Architecture Overview
+
+User Input
+    ↓
+Monte Carlo Simulation (Authoritative)
+    ↓
+Risk Metrics & Paths
+    ↓
+Visualisation Layer
+    ↓
+Optional AI Explanation (Non-authoritative)
+```
+
+**Key Principle:** AI **never** feeds back into the simulation.
+---
+
+## ⚠️ Disclaimer
+
+CashShield is **not financial advice**.  
+It is an educational and analytical tool designed to improve risk awareness and decision understanding.
+
+---
+
+## 🚀 Getting Started
 
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/yourusername/cashshield.git
 cd cashshield
+```
 
-### 2. Install dependecies
+### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
+```
 
-### 3. Install local AI
-```bash
-ollama run llama3
-If Ollama is not installed, the simulation still works — only AI explanations are skipped.
-
-### 4. Run the app
+### 3. Run the app
 ```bash
 streamlit run app.py
+```
 
+---
 
+## 🧪 Example Use Cases
 
-## How to use Cashshield?
+* Understanding financial fragility despite positive cashflow
+* Comparing savings strategies under uncertainty
+* Stress-testing lifestyle changes
+* Teaching probabilistic thinking in finance
+* Research into decision-making under risk
 
-Enter your financial reality
+---
 
-Monthly income
+## 🧭 Roadmap
 
-Fixed monthly bills
+* User profile persistence
+* Scenario comparison dashboard
+* Research validation with user studies
+* SaaS deployment
+* Academic publication variant
 
-Flexible spending
+---
 
-Current savings
+## 👤 Author
 
-Choose your simulation settings
+**MD Tanvir Anjum**  
+Builder focused on risk, simulation, and responsible AI design.
 
-How many months ahead to simulate
+---
 
-How many possible futures to test
+## 💡 Why This Project Matters
 
-Run the analysis
+CashShield demonstrates:
 
-Click “Analyze My Financial Survival”
+* Product thinking under uncertainty
+* Responsible AI architecture
+* Simulation-based decision systems
+* UX for emotionally sensitive domains
+* Evolution from v1 → v2 driven by insight, not hype
 
-Review the results
+---
 
-Your probability of running out of money
+## ⭐ If This Resonates
 
-Typical vs worst-case cash trajectories
+Feel free to star the repo, open issues, or reach out to discuss:
 
-Risk classification (Low / Moderate / High)
+* FinTech
+* Decision science
+* AI ethics
+* Simulation systems
 
-Key reasons your finances fail or survive
-
-Read the AI explanation
-
-Plain-English summary of your situation
-
-What actually puts you at risk
-
-3 clear, realistic actions to improve survival
-
-Use the insights
-
-Focus on reducing fixed costs
-
-Increase emergency buffers
-
-Plan for bad timing, not perfect months
-
-⚠️ Important Notes
-
-CashShield is for education and insight, not financial advice
-
-Results depend on realistic inputs
-
-Risk ≠ failure — it highlights vulnerability, not judgment
-
-
-
+---
