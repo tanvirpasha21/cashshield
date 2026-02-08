@@ -1,162 +1,283 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import subprocess
+import requests
 
+# -------------------------------------------------
 # PAGE CONFIG
+# -------------------------------------------------
 st.set_page_config(
     page_title="CashShield",
     page_icon="🛡️",
     layout="centered"
 )
 
-# HEADER
-
 st.title("🛡️ CashShield")
-st.caption("Simulate your financial future. Understand risk. Get clear advice.")
+st.caption("See financial risk before it hits. Then change it.")
 
-st.markdown(
+st.markdown("""
+CashShield stress-tests your finances against **real life**,  
+so you can understand risk *without shame or jargon*.
+""")
+
+# -------------------------------------------------
+# OPENROUTER LLM
+# -------------------------------------------------
+def run_llm(prompt: str) -> str:
     """
-CashShield runs **thousands of future scenarios** based on your real finances  
-and explains what *actually* puts you at risk — in plain English.
-"""
-)
+    Sends a prompt to OpenRouter and returns the response.
+    Fails gracefully if the API is unavailable.
+    """
+    api_key = st.secrets.get("OPENROUTER_API_KEY")
+    if not api_key:
+        return "⚠️ OpenRouter API key not found."
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://cashshield.app",
+        "X-Title": "CashShield"
+    }
+
+    payload = {
+        "model": "openai/gpt-4o-mini",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a calm, supportive financial guide. "
+                    "Explain financial risk without jargon or shame. "
+                    "Be clear, honest, and practical."
+                )
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.4,
+        "max_tokens": 400
+    }
+
+    try:
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data["choices"][0]["message"]["content"].strip()
+
+    except Exception:
+        return "⚠️ AI explanation unavailable. Results shown without commentary."
 
 
-# USER INPUTS
-st.subheader("Your Monthly Reality")
+# =================================================
+# STEP 1 — CORE FINANCES
+# =================================================
+st.header("1️⃣ Your Monthly Reality")
 
-income = st.number_input("Income (£)", min_value=0.0, step=100.0, value=2800.0)
-fixed_expenses = st.number_input("Fixed bills (£)", min_value=0.0, step=50.0, value=1800.0)
-variable_expenses = st.number_input("Flexible spending (£)", min_value=0.0, step=50.0, value=700.0)
-savings = st.number_input("Current savings (£)", min_value=0.0, step=100.0, value=5000.0)
+with st.expander("Enter your real numbers", expanded=True):
+    income = st.number_input("Monthly income (£)", 0.0, step=100.0, value=2800.0)
+    fixed_expenses = st.number_input("Fixed bills (£)", 0.0, step=50.0, value=1800.0)
+    variable_expenses = st.number_input("Flexible spending (£)", 0.0, step=50.0, value=700.0)
+    savings = st.number_input("Current savings (£)", 0.0, step=100.0, value=5000.0)
 
-months = st.slider("Months to simulate", 6, 24, 12)
-runs = st.slider("Number of futures to simulate", 500, 3000, 1500)
+monthly_surplus = income - (fixed_expenses + variable_expenses)
 
-# -------------------------------------------------
-# SIMULATION LOGIC
-# -------------------------------------------------
-def monte_carlo_simulation(
-    income,
-    fixed_expenses,
-    variable_expenses,
-    savings,
-    months,
-    runs
+# =================================================
+# STEP 2 — TIME & REALISM
+# =================================================
+st.header("2️⃣ Stress Test Settings")
+
+with st.expander("How hard should we stress-test?", expanded=True):
+    months = st.slider("Months to simulate", 6, 24, 12)
+    runs = st.slider("Number of simulated futures", 500, 3000, 1500)
+
+# =================================================
+# STEP 3 — LIFE SHOCKS
+# =================================================
+st.header("3️⃣ Real-Life Shocks")
+
+with st.expander("Things that happen to normal people"):
+    col1, col2 = st.columns(2)
+
+    with col1:
+        job_loss_prob = st.slider("Chance of job loss per month (%)", 0, 20, 5) / 100
+        job_loss_duration = st.slider("Months without income", 1, 6, 3)
+
+    with col2:
+        emergency_prob = st.slider("Chance of emergency per month (%)", 0, 20, 7) / 100
+        emergency_cost = st.number_input("Emergency cost (£)", 200, 5000, 1200, step=100)
+
+# =================================================
+# STEP 4 — WHAT IF FIXES
+# =================================================
+st.header("4️⃣ Try a What-If Fix")
+
+with st.expander("Test changes safely"):
+    delta_income = st.number_input("Increase income (£)", -500, 1000, 0, step=100)
+    delta_fixed = st.number_input("Reduce fixed bills (£)", -1000, 0, 0, step=100)
+    delta_savings = st.number_input("Add to savings (£)", 0, 10000, 0, step=500)
+
+# =================================================
+# MONTE CARLO ENGINE
+# =================================================
+def monte_carlo(
+    income, fixed, variable, savings,
+    months, runs,
+    job_loss_prob, job_loss_duration,
+    emergency_prob, emergency_cost
 ):
-    all_runs = []
+    paths = []
+    fail_months = []
 
     for _ in range(runs):
         balance = savings
+        unemployed = 0
         path = []
+        failed = None
 
-        for _ in range(months):
-            income_real = np.random.normal(income, income * 0.05)
+        for m in range(months):
+            # Job loss event
+            if unemployed == 0 and np.random.rand() < job_loss_prob:
+                unemployed = job_loss_duration
+
+            # Income & expenses
+            income_real = 0 if unemployed else np.random.normal(income, income * 0.05)
             expense_real = np.random.normal(
-                fixed_expenses + variable_expenses,
-                (fixed_expenses + variable_expenses) * 0.1
+                fixed + variable,
+                (fixed + variable) * 0.1
             )
 
+            # Emergency event
+            if np.random.rand() < emergency_prob:
+                expense_real += emergency_cost
+
+            # Update balance
             balance += max(0, income_real) - max(0, expense_real)
             path.append(balance)
 
-        all_runs.append(path)
+            # Track failure month
+            if balance < 0 and failed is None:
+                failed = m + 1
 
-    return np.array(all_runs)
+            unemployed = max(0, unemployed - 1)
 
-# -------------------------------------------------
-# LOCAL LLM (OLLAMA)
-# -------------------------------------------------
-def run_llm(prompt):
-    result = subprocess.run(
-        ["ollama", "run", "llama3"],
-        input=prompt,
-        text=True,
-        capture_output=True
-    )
-    return result.stdout.strip()
+        paths.append(path)
+        fail_months.append(failed)
 
-# -------------------------------------------------
+    return np.array(paths), fail_months
+
+# =================================================
 # RUN ANALYSIS
-# -------------------------------------------------
-if st.button("🔮 Analyze My Financial Survival"):
+# =================================================
+if st.button("🔮 Run Survival Test", use_container_width=True):
 
     if income <= 0:
         st.error("Income must be greater than zero.")
         st.stop()
 
-    results = monte_carlo_simulation(
-        income,
-        fixed_expenses,
-        variable_expenses,
-        savings,
-        months,
-        runs
+    base, fail_months = monte_carlo(
+        income, fixed_expenses, variable_expenses, savings,
+        months, runs,
+        job_loss_prob, job_loss_duration,
+        emergency_prob, emergency_cost
     )
 
-    final_balances = results[:, -1]
-    failures = np.sum(results.min(axis=1) < 0)
-    failure_rate = failures / runs
+    improved, _ = monte_carlo(
+        income + delta_income,
+        fixed_expenses + delta_fixed,
+        variable_expenses,
+        savings + delta_savings,
+        months, runs,
+        job_loss_prob, job_loss_duration,
+        emergency_prob, emergency_cost
+    )
 
-    median_path = np.median(results, axis=0)
-    worst_case = np.percentile(results, 10, axis=0)
+    failure_rate = np.mean(base.min(axis=1) < 0)
+    improved_rate = np.mean(improved.min(axis=1) < 0)
 
-    # -------------------------------------------------
-    # VISUAL
-    # -------------------------------------------------
-    st.subheader("📉 Your Possible Futures")
+    median_path = np.median(base, axis=0)
+    worst_case = np.percentile(base, 10, axis=0)
 
-    fig, ax = plt.subplots()
-    ax.plot(median_path, label="Typical outcome")
-    ax.plot(worst_case, linestyle="--", label="Bad-case scenario (10%)")
-    ax.axhline(0)
-    ax.set_xlabel("Months")
-    ax.set_ylabel("Cash (£)")
-    ax.legend()
+    fail_clean = [m for m in fail_months if m]
+    median_fail = int(np.median(fail_clean)) if fail_clean else None
 
-    st.pyplot(fig)
-
-    # -------------------------------------------------
-    # RISK SUMMARY
-    # -------------------------------------------------
-    st.subheader("⚠️ Financial Risk Summary")
+    # =================================================
+    # RESULTS — RISK FIRST
+    # =================================================
+    st.header("🚨 Your Financial Risk")
 
     if failure_rate > 0.3:
         risk = "High Risk"
-        st.error(f"You run out of money in **{failure_rate:.0%}** of futures.")
+        st.error(f"High risk — you fail in **{failure_rate:.0%}** of futures.")
     elif failure_rate > 0.1:
         risk = "Moderate Risk"
-        st.warning(f"You run out of money in **{failure_rate:.0%}** of futures.")
+        st.warning(f"Moderate risk — failure in **{failure_rate:.0%}** of futures.")
     else:
         risk = "Low Risk"
-        st.success(f"You survive **{100 - failure_rate*100:.0f}%** of futures.")
+        st.success(f"Low risk — survival in **{100 - failure_rate*100:.0f}%** of futures.")
 
-    monthly_surplus = income - (fixed_expenses + variable_expenses)
+    # =================================================
+    # VISUAL
+    # =================================================
+    st.subheader("📉 What Your Future Could Look Like")
 
-    # -------------------------------------------------
+    fig, ax = plt.subplots()
+    ax.plot(median_path, label="Typical path")
+    ax.plot(worst_case, "--", label="Bad-case (10%)")
+    ax.axhline(0)
+    ax.legend()
+    st.pyplot(fig)
+
+    # =================================================
+    # TIME TO FAILURE
+    # =================================================
+    st.subheader("⏱️ When Problems Usually Start")
+
+    if median_fail:
+        st.warning(f"Most failures happen around **month {median_fail}**.")
+    else:
+        st.success("Most futures survive the full period.")
+
+    # =================================================
     # ROOT CAUSES
-    # -------------------------------------------------
+    # =================================================
     st.subheader("🧩 Why Risk Exists")
 
     if monthly_surplus < 0:
-        st.write("• You spend more than you earn — even small shocks cause failure.")
+        st.write("• You spend more than you earn.")
     if fixed_expenses > income * 0.6:
-        st.write("• Fixed bills are too high and hard to adjust during bad months.")
+        st.write("• Fixed bills are too high to adjust quickly.")
     if savings < fixed_expenses * 2:
-        st.write("• Cash buffer is too small to absorb bad timing.")
+        st.write("• Your cash buffer is too thin.")
     if monthly_surplus > 0 and savings > fixed_expenses * 3:
-        st.write("• Risk mainly comes from randomness, not behavior.")
+        st.write("• Risk mainly comes from bad timing, not habits.")
 
-    # -------------------------------------------------
+    # =================================================
+    # ACTION IMPACT
+    # =================================================
+    st.subheader("📊 Do Your Changes Help?")
+
+    col1, col2 = st.columns(2)
+    col1.metric("Failure Rate (Now)", f"{failure_rate:.0%}")
+    col2.metric(
+        "Failure Rate (After Fix)",
+        f"{improved_rate:.0%}",
+        delta=f"{(failure_rate - improved_rate):.0%}"
+    )
+
+    # =================================================
     # AI EXPLANATION
-    # -------------------------------------------------
-    st.subheader("🤖 AI Financial Explanation")
+    # =================================================
+    st.subheader("🤖 Plain-English Explanation")
 
     prompt = f"""
-You are a calm, supportive personal financial analyst.
-
-User data:
 Income: £{income}
 Fixed expenses: £{fixed_expenses}
 Variable spending: £{variable_expenses}
@@ -166,30 +287,12 @@ Failure rate: {failure_rate:.2%}
 Risk level: {risk}
 
 Explain:
-1. Their financial situation in simple terms
-2. What the real danger is (not shaming)
-3. 3 clear, realistic actions they can take
-
-Avoid jargon. Be human and practical.
+1. What’s happening financially
+2. The real danger
+3. Three practical actions
 """
 
-    with st.spinner("Thinking..."):
-        ai_response = run_llm(prompt)
+    with st.spinner("Thinking…"):
+        st.write(run_llm(prompt))
 
-    st.write(ai_response)
-
-    # -------------------------------------------------
-    # FINAL ADVICE
-    # -------------------------------------------------
-    st.subheader("🛠️ What Improves Survival Fastest")
-
-    st.markdown(
-        """
-- Build emergency cash before optimizing spending
-- Reduce **fixed** bills first — they create irreversible risk
-- Expect bad months to happen early, not later
-- Stability matters more than perfection
-"""
-    )
-
-st.caption("CashShield • Built with Monte Carlo simulation + local AI")
+st.caption("CashShield v2.3 • OpenRouter • Clear Risk • Human Explanations")
