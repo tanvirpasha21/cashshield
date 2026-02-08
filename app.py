@@ -278,18 +278,18 @@ if st.button("🔮 Run Survival Test", use_container_width=True):
     st.subheader("🤖 Plain-English Explanation")
 
     prompt = f"""
-Income: £{income}
-Fixed expenses: £{fixed_expenses}
-Variable spending: £{variable_expenses}
-Savings: £{savings}
-Monthly surplus: £{monthly_surplus}
-Failure rate: {failure_rate:.2%}
-Risk level: {risk}
-
-Explain:
-1. What’s happening financially
-2. The real danger
-3. Three practical actions
+                Income: £{income}
+                Fixed expenses: £{fixed_expenses}
+                Variable spending: £{variable_expenses}
+                Savings: £{savings}
+                Monthly surplus: £{monthly_surplus}
+                Failure rate: {failure_rate:.2%}
+                Risk level: {risk}
+                
+                Explain:
+                1. What’s happening financially
+                2. The real danger
+                3. Three practical actions
 """
 
     with st.spinner("Thinking…"):
