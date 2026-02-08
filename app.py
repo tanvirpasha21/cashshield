@@ -58,7 +58,7 @@ def run_llm(prompt: str) -> str:
             }
         ],
         "temperature": 0.4,
-        "max_tokens": 400
+        "max_tokens": 800
     }
 
     try:
